@@ -1,4 +1,4 @@
-"""quote_price follows data/policies/prices.md."""
+"""quote_price and calculate_late_fee follow data/policies/prices.md."""
 
 import json
 from datetime import datetime
@@ -6,7 +6,7 @@ from datetime import datetime
 import pytest
 
 from citywheels.config import BOOKINGS_FILE
-from citywheels.tools import quote_price
+from citywheels.tools import calculate_late_fee, quote_price
 
 BOOKINGS = json.loads(BOOKINGS_FILE.read_text(encoding="utf-8"))
 
@@ -81,3 +81,22 @@ def test_bad_input_is_an_error_not_a_crash(args):
 
 def test_unknown_add_on_is_an_error():
     assert "error" in quote_price("city", 1, 3, ["jetpack"])
+
+
+# ---------------------------------------------------------------- calculate_late_fee
+
+def test_late_fee_is_one_and_a_half_times_the_hourly_price_per_started_hour():
+    assert calculate_late_fee("e-bike", 1, 2)["late_fee_eur"] == 27.0
+
+
+def test_late_fee_counts_every_started_hour():
+    assert calculate_late_fee("e-bike", 1, 2.1)["late_fee_eur"] == 3 * 13.5
+
+
+def test_late_fee_is_per_bike():
+    assert calculate_late_fee("kids", 2, 0.5)["late_fee_eur"] == 2 * 3.0
+
+
+@pytest.mark.parametrize("args", [("tandem", 1, 1), ("city", 0, 1), ("city", 1, 0), ("city", 1, "late")])
+def test_late_fee_bad_input_is_an_error_not_a_crash(args):
+    assert "error" in calculate_late_fee(*args)

@@ -215,6 +215,7 @@ ADD_ON_PRICE_PER_DAY_EUR = {"child_seat": 3}
 ONLINE_BOOKING_FEE_EUR = 2
 LONG_RENTAL_HOURS = 7 * 24
 LONG_RENTAL_DISCOUNT = 0.15
+LATE_RETURN_MULTIPLIER = 1.5
 
 
 def quote_price(
@@ -267,6 +268,30 @@ def quote_price(
     }
 
 
+# ---------------------------------------------------------------- calculate_late_fee
+
+def calculate_late_fee(bike_type: str, bikes: int, hours_late: float) -> dict:
+    """Late return fee: 1.5 x the hourly price for every started hour of delay, per bike."""
+    if bike_type not in HOURLY_PRICE_EUR:
+        return {"error": f"Unknown bike type '{bike_type}'. Bike types are: city, e-bike, kids."}
+    if not isinstance(bikes, int) or bikes < 1:
+        return {"error": "bikes must be a whole number of at least 1."}
+    if not isinstance(hours_late, (int, float)) or hours_late <= 0:
+        return {"error": "hours_late must be a number greater than 0."}
+
+    started_hours = math.ceil(hours_late)
+    fee_per_hour = HOURLY_PRICE_EUR[bike_type] * LATE_RETURN_MULTIPLIER
+    return {
+        "bike_type": bike_type,
+        "bikes": bikes,
+        "hours_late": hours_late,
+        "started_hours_charged": started_hours,
+        "fee_per_hour_per_bike_eur": fee_per_hour,
+        "late_fee_eur": round(fee_per_hour * started_hours * bikes, 2),
+        "note": "The late fee is taken from the deposit.",
+    }
+
+
 # ---------------------------------------------------------------- dispatch
 
 TOOL_FUNCTIONS = {
@@ -274,6 +299,7 @@ TOOL_FUNCTIONS = {
     "get_booking": get_booking,
     "calculate_refund": calculate_refund,
     "quote_price": quote_price,
+    "calculate_late_fee": calculate_late_fee,
 }
 
 # Tool definitions sent to the model. The descriptions say *when* to call each tool.
@@ -367,6 +393,24 @@ TOOL_SCHEMAS = [
                 },
             },
             "required": ["bike_type", "bikes", "hours", "add_ons", "booked_online"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "calculate_late_fee",
+        "description": (
+            "Calculate the fee for returning bikes after the end of the rental. Call this whenever the "
+            "customer asks what a late return costs; never multiply prices yourself."
+        ),
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "bike_type": {"type": "string", "enum": ["city", "e-bike", "kids"]},
+                "bikes": {"type": "integer", "description": "Number of bikes returned late."},
+                "hours_late": {"type": "number", "description": "How many hours after the end of the rental."},
+            },
+            "required": ["bike_type", "bikes", "hours_late"],
             "additionalProperties": False,
         },
     },
