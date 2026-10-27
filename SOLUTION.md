@@ -170,21 +170,23 @@ There are 134 tests. They run in about 0.1 s with `pytest -q`, with no network a
 
 ## 6. How I used AI coding assistants
 
-I built this with **Claude Code** (Claude Opus 5.5) in the terminal.
-- It read the assignment and the data, pointed out the traps: the exact 48 h / 24 h boundaries, the voucher refund, and the fact that non-confirmed bookings get no refund at all.
-- It proposed a plan, which I approved after choosing the model, the extras and the repository setup.
-- It then wrote most of the code, the tests and the evaluation, and ran them.
+I built this with **Claude Code** (Claude Opus 5.5) in the terminal. It wrote nearly all of the code, the tests and the evaluation, and ran them. Where this document says "I ran" or "I read", Claude Code often did that step in my session. Commits carry a `Co-Authored-By: Claude` line.
 
-Commits carry a `Co-Authored-By: Claude` line.
+How I worked with it:
+
+- **Understanding the task first.** Before any code, I had it summarise the assignment and explain the parts I wasn't sure about, for example what "LLM provider" means here and whether my API key would be part of the submission (it isn't). It also pointed out the traps in the data: the exact 48 h / 24 h boundaries, the voucher refund, and that only `confirmed` bookings get anything back.
+- **Decisions I made:** the model (Opus 5.5, with my own key), a public repository, and two of the extras: follow-up memory and the GitHub Actions workflow. I left the model comparison for later (section 8). It wrote a plan from these choices, and I approved it before the main build.
+- **Rules I kept:** the API key lives only in my local `.env`, and I never pasted it into the chat. The assignment text stays out of the repository. Before pushing, the tracked files and the whole git history were checked for `.env` and for anything that looks like a key.
+- **A step I did myself:** the first push was rejected because my GitHub token had no `workflow` scope, so I refreshed the token and pushed again.
 
 Examples where its output was wrong or needed changes, and how each was noticed:
 
-1. **Word matching in search.** The first stemmer stripped only one suffix, so "cancellations" did not match "cancellation". Caught by reviewing the function before the tests ran; it was rewritten to strip the plural first.
-2. **The agent offered something it cannot do.** In the first live test it ended a refund answer with "Would you like to go ahead with the cancellation?", but it has no way to cancel. Caught by reading the smoke-test output. Fixed with a prompt rule, then re-tested.
-3. **Graders that were too lenient.** The first evaluation scored 20/20, which looked too good. Reading every answer showed a phrase group matching almost anything, and no protection against invented amounts. See Evaluation, failure 1.
-4. **A grader that was too strict.** A missing "doesn't take" variant marked a correct answer as failed. Caught by reading the failing answer instead of changing the agent. See failure 3.
+1. **Word matching in search.** The first stemmer stripped only one suffix, so "cancellations" did not match "cancellation". Claude Code caught this itself when re-reading the function, before the tests ran, and rewrote it to strip the plural first.
+2. **The agent offered something it cannot do.** In the first live test it ended a refund answer with "Would you like to go ahead with the cancellation?", but it has no way to cancel. It showed up in the smoke-test output. Fixed with a prompt rule, then re-tested.
+3. **Graders that were too lenient.** The first evaluation scored 20/20. A perfect first score was a reason to look closer, not to stop: reading every answer showed a phrase group matching almost anything, and no protection against invented amounts. See Evaluation, failure 1.
+4. **A grader that was too strict.** A missing "doesn't take" variant marked a correct answer as failed. Noticed by reading the failing answer before touching the agent. See failure 3.
 
-Lesson: an AI assistant (and an AI agent) produces plausible output quickly. The value comes from tests that can fail, from reading real outputs, and from checking the checks.
+What I take from this: an AI assistant (and an AI agent) produces plausible output quickly, but plausible is not the same as checked. What made the result trustworthy was tests shown to fail (the `>= 48` change in section 4), reading real outputs instead of trusting a score, and testing the graders themselves.
 
 ## 7. Limitations
 
