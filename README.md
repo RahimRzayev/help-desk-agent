@@ -1,5 +1,7 @@
 # CityWheels help desk — base data
 
+> **The agent:** see [SOLUTION.md](SOLUTION.md) for how to install, run, test and evaluate it, and how it works. This README describes the base data it was built on.
+
 CityWheels is a made-up bike rental shop. These files hold the data for its help desk agent. There is no code here: you write it.
 
 ## Files
